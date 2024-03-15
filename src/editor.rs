@@ -1,13 +1,18 @@
+use crate::Terminal;
 use std::io::{self, stdin, stdout, Write};
 use termion::{event::Key, input::TermRead, raw::IntoRawMode};
 
 pub struct Editor {
+    terminal: Terminal,
     should_quit: bool,
 }
 
 impl Editor {
     pub fn default() -> Self {
-        Self { should_quit: false }
+        Self {
+            should_quit: false,
+            terminal: Terminal::default().expect("Failed to initialize terminal"),
+        }
     }
 
     pub fn run(&mut self) {
@@ -40,8 +45,17 @@ impl Editor {
         print!("{}{}", termion::clear::All, termion::cursor::Goto(1, 1));
         if self.should_quit {
             println!("Exiting rvim.\r");
+        } else {
+            self.draw_rows();
+            print!("{}", termion::cursor::Goto(1, 1));
         }
         io::stdout().flush()
+    }
+
+    fn draw_rows(&self) {
+        for _ in 0..self.terminal.size().height {
+            println!("~\r");
+        }
     }
 }
 
