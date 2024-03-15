@@ -1,6 +1,7 @@
 use crate::Document;
 use crate::Row;
 use crate::Terminal;
+use std::cmp::{max, min};
 use std::{env, io};
 use termion::event::Key;
 
@@ -14,6 +15,7 @@ pub struct Pos {
 
 pub struct Editor {
     cursor_pos: Pos,
+    offset: Pos,
     document: Document,
     terminal: Terminal,
     should_quit: bool,
@@ -30,6 +32,7 @@ impl Editor {
 
         Self {
             cursor_pos: Pos::default(),
+            offset: Pos::default(),
             should_quit: false,
             terminal: Terminal::default().expect("Failed to initialize terminal"),
             document,
@@ -66,6 +69,7 @@ impl Editor {
             | Key::Home => self.move_cursor(pressed_key),
             _ => (),
         }
+        self.scroll();
         Ok(())
     }
 
@@ -77,15 +81,19 @@ impl Editor {
             println!("Exiting rvim.\r");
         } else {
             self.draw_rows();
-            Terminal::cursor_goto(&self.cursor_pos);
+            Terminal::cursor_goto(&Pos {
+                x: self.cursor_pos.x - self.offset.x,
+                y: self.cursor_pos.y - self.offset.y,
+            });
         }
         Terminal::cursor_show();
         Terminal::flush()
     }
 
     fn draw_row(&self, row: &Row) {
-        let start = 0;
-        let end = self.terminal.size().width as usize;
+        let width = self.terminal.size().width as usize;
+        let start = self.offset.x;
+        let end = self.offset.x + width;
         let row = row.render(start, end);
         println!("{row}\r");
     }
@@ -94,7 +102,7 @@ impl Editor {
         let height = self.terminal.size().height;
         for terminal_row in 0..height - 1 {
             Terminal::clear_current_line();
-            if let Some(row) = self.document.row(terminal_row as usize) {
+            if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
                 self.draw_row(row)
             } else if self.document.is_empty() && terminal_row == height / 3 {
                 self.draw_welcome_message();
@@ -108,28 +116,75 @@ impl Editor {
         let mut welcome_message = format!("RVim editor -- version {}", VERSION);
         let width = self.terminal.size().width as usize;
         let len = welcome_message.len();
-        let padding = width.saturating_sub(len) / 2;
-        let spaces = " ".repeat(padding.saturating_sub(1));
+        let padding = (width - len) / 2;
+        let spaces = " ".repeat(padding - 1);
         welcome_message = format!("~{}{}", spaces, welcome_message);
         welcome_message.truncate(width);
         println!("{}\r", welcome_message);
     }
 
     fn move_cursor(&mut self, key: Key) {
+        let terminal_height = self.terminal.size().height as usize;
         let Pos { mut x, mut y } = self.cursor_pos;
-        let size = self.terminal.size();
-        let height = size.height.saturating_sub(1) as usize;
-        let width = size.width.saturating_sub(1) as usize;
+        let height = self.document.len();
+        let mut width = if let Some(row) = self.document.row(y) {
+            row.len()
+        } else {
+            0
+        };
         match key {
-            Key::Up => y = y.saturating_sub(1).max(0),
-            Key::Down => y = y.saturating_add(1).min(height),
-            Key::Left => x = x.saturating_sub(1).max(0),
-            Key::Right => x = x.saturating_add(1).min(width),
-            Key::PageUp => y = 0,
-            Key::PageDown => y = height,
+            Key::Up => y = max(y - 1, 0),
+            Key::Down => y = min(y + 1, height),
+            Key::Left => {
+                if x > 0 {
+                    x -= 1;
+                } else if y > 0 {
+                    y -= 1;
+                    if let Some(row) = self.document.row(y) {
+                        x = row.len();
+                    } else {
+                        x = 0;
+                    }
+                }
+            }
+            Key::Right => {
+                if x < width {
+                    x += 1;
+                } else if y < height {
+                    y += 1;
+                    x = 0;
+                }
+            }
+            Key::PageUp => y = max(y - terminal_height, 0),
+            Key::PageDown => y = min(y + terminal_height, height),
+            Key::Home => x = 0,
+            Key::End => x = width,
             _ => (),
         }
+        width = if let Some(row) = self.document.row(y) {
+            row.len()
+        } else {
+            0
+        };
+        x = min(x, width);
         self.cursor_pos = Pos { x, y };
+    }
+
+    fn scroll(&mut self) {
+        let Pos { x, y } = self.cursor_pos;
+        let width = self.terminal.size().width as usize;
+        let height = self.terminal.size().height as usize;
+        if x < self.offset.x {
+            self.offset.x = x;
+        } else if x >= self.offset.x + width {
+            self.offset.x = x - width + 1
+        }
+
+        if y < self.offset.y {
+            self.offset.y = y;
+        } else if y >= self.offset.y + height {
+            self.offset.y = y - height + 1
+        }
     }
 }
 
