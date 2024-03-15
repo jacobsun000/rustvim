@@ -1,9 +1,12 @@
+use crate::Document;
+use crate::Row;
 use crate::Terminal;
 use std::io;
 use termion::event::Key;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Default)]
 pub struct Pos {
     pub x: usize,
     pub y: usize,
@@ -11,6 +14,7 @@ pub struct Pos {
 
 pub struct Editor {
     cursor_pos: Pos,
+    document: Document,
     terminal: Terminal,
     should_quit: bool,
 }
@@ -18,9 +22,10 @@ pub struct Editor {
 impl Editor {
     pub fn default() -> Self {
         Self {
-            cursor_pos: Pos { x: 0, y: 0 },
+            cursor_pos: Pos::default(),
             should_quit: false,
             terminal: Terminal::default().expect("Failed to initialize terminal"),
+            document: Document::open(),
         }
     }
 
@@ -59,7 +64,7 @@ impl Editor {
 
     fn refresh_screen(&self) -> Result<(), io::Error> {
         Terminal::cursor_hide();
-        Terminal::cursor_goto(&Pos { x: 0, y: 0 });
+        Terminal::cursor_goto(&Pos::default());
         if self.should_quit {
             Terminal::clear_screen();
             println!("Exiting rvim.\r");
@@ -71,11 +76,20 @@ impl Editor {
         Terminal::flush()
     }
 
+    fn draw_row(&self, row: &Row) {
+        let start = 0;
+        let end = self.terminal.size().width as usize;
+        let row = row.render(start, end);
+        println!("{row}\r");
+    }
+
     fn draw_rows(&self) {
         let height = self.terminal.size().height;
-        for row in 0..height - 1 {
+        for terminal_row in 0..height - 1 {
             Terminal::clear_current_line();
-            if row == height / 3 {
+            if let Some(row) = self.document.row(terminal_row as usize) {
+                self.draw_row(row)
+            } else if self.document.is_empty() && terminal_row == height / 3 {
                 self.draw_welcome_message();
             } else {
                 println!("~\r");
@@ -106,8 +120,6 @@ impl Editor {
             Key::Right => x = x.saturating_add(1).min(width),
             Key::PageUp => y = 0,
             Key::PageDown => y = height,
-            Key::Home => x = 0,
-            Key::End => x = width,
             _ => (),
         }
         self.cursor_pos = Pos { x, y };
