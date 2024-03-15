@@ -37,10 +37,14 @@ impl Terminal {
 
     pub fn read_key() -> Result<Key, io::Error> {
         loop {
-            if let Some(key) = io::stdin().lock().keys().next() {
+            if let Some(key) = stdin().lock().keys().next() {
                 return key;
             }
         }
+    }
+
+    pub fn clear_current_line() {
+        print!("{}", termion::clear::CurrentLine);
     }
 
     pub fn cursor_goto(x: u16, y: u16) {
