@@ -31,12 +31,6 @@ impl Terminal {
         print!("{}", termion::clear::All);
     }
 
-    pub fn goto(x: u16, y: u16) {
-        let x = x.saturating_add(1);
-        let y = y.saturating_add(1);
-        print!("{}", termion::cursor::Goto(x, y));
-    }
-
     pub fn flush() -> Result<(), std::io::Error> {
         io::stdout().flush()
     }
@@ -47,5 +41,19 @@ impl Terminal {
                 return key;
             }
         }
+    }
+
+    pub fn cursor_goto(x: u16, y: u16) {
+        let x = x.saturating_add(1);
+        let y = y.saturating_add(1);
+        print!("{}", termion::cursor::Goto(x, y));
+    }
+
+    pub fn cursor_hide() {
+        print!("{}", termion::cursor::Hide);
+    }
+
+    pub fn cursor_show() {
+        print!("{}", termion::cursor::Show);
     }
 }

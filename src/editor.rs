@@ -41,14 +41,16 @@ impl Editor {
     }
 
     fn refresh_screen(&self) -> Result<(), io::Error> {
+        Terminal::cursor_hide();
         Terminal::clear_screen();
-        Terminal::goto(0, 0);
+        Terminal::cursor_goto(0, 0);
         if self.should_quit {
             println!("Exiting rvim.\r");
         } else {
             self.draw_rows();
-            Terminal::goto(0, 0);
+            Terminal::cursor_goto(0, 0);
         }
+        Terminal::cursor_show();
         Terminal::flush()
     }
 
