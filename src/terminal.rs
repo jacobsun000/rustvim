@@ -1,3 +1,4 @@
+use crate::Pos;
 use std::io::{self, stdin, stdout, Write};
 use termion::{self, event::Key, input::TermRead, raw::IntoRawMode};
 
@@ -47,9 +48,9 @@ impl Terminal {
         print!("{}", termion::clear::CurrentLine);
     }
 
-    pub fn cursor_goto(x: u16, y: u16) {
-        let x = x.saturating_add(1);
-        let y = y.saturating_add(1);
+    pub fn cursor_goto(pos: &Pos) {
+        let x = (pos.x + 1) as u16;
+        let y = (pos.y + 1) as u16;
         print!("{}", termion::cursor::Goto(x, y));
     }
 

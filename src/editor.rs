@@ -4,7 +4,13 @@ use termion::event::Key;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+pub struct Pos {
+    pub x: usize,
+    pub y: usize,
+}
+
 pub struct Editor {
+    cursor_pos: Pos,
     terminal: Terminal,
     should_quit: bool,
 }
@@ -12,6 +18,7 @@ pub struct Editor {
 impl Editor {
     pub fn default() -> Self {
         Self {
+            cursor_pos: Pos { x: 0, y: 0 },
             should_quit: false,
             terminal: Terminal::default().expect("Failed to initialize terminal"),
         }
@@ -44,13 +51,13 @@ impl Editor {
 
     fn refresh_screen(&self) -> Result<(), io::Error> {
         Terminal::cursor_hide();
-        Terminal::cursor_goto(0, 0);
+        Terminal::cursor_goto(&Pos { x: 0, y: 0 });
         if self.should_quit {
             Terminal::clear_screen();
             println!("Exiting rvim.\r");
         } else {
             self.draw_rows();
-            Terminal::cursor_goto(0, 0);
+            Terminal::cursor_goto(&self.cursor_pos);
         }
         Terminal::cursor_show();
         Terminal::flush()
@@ -67,6 +74,7 @@ impl Editor {
             }
         }
     }
+
     fn draw_welcome_message(&self) {
         let mut welcome_message = format!("RVim editor -- version {}", VERSION);
         let width = self.terminal.size().width as usize;
