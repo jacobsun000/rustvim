@@ -43,7 +43,7 @@ pub struct Editor {
 impl Editor {
     pub fn default() -> Self {
         let args: Vec<String> = env::args().collect();
-        let mut initial_status = String::from("HELP: Ctrl-Q = quit");
+        let mut initial_status = String::from("HELP: <C-S> = save <C-Q> = quit");
         let document = if args.len() > 1 {
             if let Ok(doc) = Document::open(&args[1]) {
                 doc
@@ -85,6 +85,17 @@ impl Editor {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
             Key::Ctrl('q') => self.should_quit = true,
+            Key::Ctrl('s') => {
+                if self.document.filename.is_none() {
+                    self.document.filename = Some(self.prompt("Save as: ")?);
+                }
+                let message = if self.document.save().is_ok() {
+                    "File saved successfully"
+                } else {
+                    "Error writing to file!"
+                };
+                self.status_message = StatusMessage::from(message.to_string());
+            }
             Key::Char(c) => {
                 self.document.insert(&self.cursor_pos, c);
                 self.move_cursor(Key::Right)
@@ -255,6 +266,24 @@ impl Editor {
         } else if y >= self.offset.y + height {
             self.offset.y = y - height + 1
         }
+    }
+
+    fn prompt(&mut self, prompt: &str) -> Result<String, io::Error> {
+        let mut result = String::new();
+        loop {
+            self.status_message = StatusMessage::from(format!("{}{}", prompt, result));
+            self.refresh_screen()?;
+            if let Key::Char(c) = Terminal::read_key()? {
+                if c == '\n' {
+                    self.status_message = StatusMessage::from(String::new());
+                    break;
+                }
+                if !c.is_control() {
+                    result.push(c);
+                }
+            }
+        }
+        Ok(result)
     }
 }
 
