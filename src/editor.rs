@@ -84,7 +84,17 @@ impl Editor {
     fn process_keypress(&mut self) -> Result<(), io::Error> {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
-            Key::Ctrl('q') => self.should_quit = true,
+            Key::Ctrl('q') => {
+                if self.document.is_dirty() {
+                    self.status_message = StatusMessage::from(
+                        "WARNING! File has unsaved changes. Please use <C-X> to abort changes"
+                            .to_string(),
+                    );
+                } else {
+                    self.should_quit = true;
+                }
+            }
+            Key::Ctrl('x') => self.should_quit = true,
             Key::Ctrl('s') => self.save(),
             Key::Char(c) => {
                 self.document.insert(&self.cursor_pos, c);
