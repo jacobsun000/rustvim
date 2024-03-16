@@ -136,7 +136,9 @@ impl Editor {
             .clone()
             .unwrap_or("[No Name]".to_string());
         filename.truncate(20);
-        let mut status = format!("{} - {} lines", filename, self.document.len());
+        let file_status = format!("{} - {} lines", filename, self.document.len());
+        let line_indicator = format!("{}:{}", self.cursor_pos.x + 1, self.cursor_pos.y + 1);
+        let mut status = format!("{} {}", file_status, line_indicator);
         status = format!("{:width$}", status, width = width);
         status.truncate(width);
 
