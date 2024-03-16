@@ -8,6 +8,7 @@ use termion::event::Key;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
+const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
 
 #[derive(Default)]
 pub struct Pos {
@@ -128,9 +129,21 @@ impl Editor {
     }
 
     fn draw_status_bar(&self) {
-        let spaces = " ".repeat(self.terminal.size().width as usize);
+        let width = self.terminal.size().width as usize;
+        let mut filename = self
+            .document
+            .filename
+            .clone()
+            .unwrap_or("[No Name]".to_string());
+        filename.truncate(20);
+        let mut status = format!("{} - {} lines", filename, self.document.len());
+        status = format!("{:width$}", status, width = width);
+        status.truncate(width);
+
         Terminal::set_bg_color(STATUS_BG_COLOR);
-        println!("{spaces}\r");
+        Terminal::set_fg_color(STATUS_FG_COLOR);
+        println!("{status}\r");
+        Terminal::reset_fg_color();
         Terminal::reset_bg_color();
     }
 
