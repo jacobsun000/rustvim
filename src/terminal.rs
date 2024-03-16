@@ -1,6 +1,6 @@
 use crate::Pos;
 use std::io::{self, stdin, stdout, Write};
-use termion::{self, event::Key, input::TermRead, raw::IntoRawMode};
+use termion::{self, color, event::Key, input::TermRead, raw::IntoRawMode};
 
 pub struct Size {
     pub width: u16,
@@ -18,7 +18,7 @@ impl Terminal {
         Ok(Self {
             size: Size {
                 width: size.0,
-                height: size.1,
+                height: size.1 - 2,
             },
             _stdout: stdout().into_raw_mode()?,
         })
@@ -60,5 +60,13 @@ impl Terminal {
 
     pub fn cursor_show() {
         print!("{}", termion::cursor::Show);
+    }
+
+    pub fn set_bg_color(color: color::Rgb) {
+        print!("{}", color::Bg(color));
+    }
+
+    pub fn reset_bg_color() {
+        print!("{}", color::Bg(color::Reset));
     }
 }

@@ -3,9 +3,11 @@ use crate::Row;
 use crate::Terminal;
 use std::cmp::{max, min};
 use std::{env, io};
+use termion::color;
 use termion::event::Key;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 
 #[derive(Default)]
 pub struct Pos {
@@ -81,6 +83,8 @@ impl Editor {
             println!("Exiting rvim.\r");
         } else {
             self.draw_rows();
+            self.draw_status_bar();
+            self.draw_message_bar();
             Terminal::cursor_goto(&Pos {
                 x: self.cursor_pos.x - self.offset.x,
                 y: self.cursor_pos.y - self.offset.y,
@@ -100,7 +104,7 @@ impl Editor {
 
     fn draw_rows(&self) {
         let height = self.terminal.size().height;
-        for terminal_row in 0..height - 1 {
+        for terminal_row in 0..height {
             Terminal::clear_current_line();
             if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
                 self.draw_row(row)
@@ -121,6 +125,17 @@ impl Editor {
         welcome_message = format!("~{}{}", spaces, welcome_message);
         welcome_message.truncate(width);
         println!("{}\r", welcome_message);
+    }
+
+    fn draw_status_bar(&self) {
+        let spaces = " ".repeat(self.terminal.size().width as usize);
+        Terminal::set_bg_color(STATUS_BG_COLOR);
+        println!("{spaces}\r");
+        Terminal::reset_bg_color();
+    }
+
+    fn draw_message_bar(&self) {
+        Terminal::clear_current_line();
     }
 
     fn move_cursor(&mut self, key: Key) {

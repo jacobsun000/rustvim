@@ -19,7 +19,7 @@ impl From<&str> for Row {
 
 impl Row {
     pub fn render(&self, start: usize, end: usize) -> String {
-        const TAB_SPACE: &str = "    ";
+        const TAB_SPACE: usize = 4;
         let end = cmp::min(end, self.string.len());
         let start = cmp::min(start, end);
         let mut result = String::new();
@@ -29,7 +29,7 @@ impl Row {
             .take(end - start)
         {
             if grapheme == "\t" {
-                result.push_str(TAB_SPACE);
+                result.push_str(" ".repeat(TAB_SPACE).as_str());
             } else {
                 result.push_str(grapheme);
             }
