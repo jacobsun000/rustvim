@@ -89,6 +89,13 @@ impl Editor {
                 self.document.insert(&self.cursor_pos, c);
                 self.move_cursor(Key::Right)
             }
+            Key::Delete => self.document.delete(&self.cursor_pos),
+            Key::Backspace => {
+                if self.cursor_pos.x > 0 || self.cursor_pos.y > 0 {
+                    self.move_cursor(Key::Left);
+                    self.document.delete(&self.cursor_pos);
+                }
+            }
             Key::Up
             | Key::Down
             | Key::Left
