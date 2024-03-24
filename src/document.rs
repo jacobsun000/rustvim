@@ -56,7 +56,7 @@ impl Document {
                 self.rows.push(row);
             }
             Ordering::Less => {
-                let row = self.rows.get_mut(at.y).unwrap();
+                let row = &mut self.rows[at.y];
                 row.insert(at.x, c);
             }
             _ => (),
@@ -64,10 +64,13 @@ impl Document {
     }
 
     pub fn insert_newline(&mut self, at: &Pos) {
+        if at.y > self.len() {
+            return;
+        }
         if at.y == self.len() {
             self.rows.push(Row::default());
         }
-        let new_row = self.rows.get_mut(at.y).unwrap().split(at.x);
+        let new_row = self.rows[at.y].split(at.x);
         self.rows.insert(at.y + 1, new_row);
     }
 
@@ -77,12 +80,12 @@ impl Document {
             return;
         }
         self.dirty = true;
-        if at.x == self.rows.get_mut(at.y).unwrap().len() && at.y < len - 1 {
+        if at.x == self.rows[at.y].len() && at.y < len - 1 {
             let next_row = self.rows.remove(at.y + 1);
-            let row = self.rows.get_mut(at.y).unwrap();
+            let row = &mut self.rows[at.y];
             row.append(&next_row);
         } else {
-            let row = self.rows.get_mut(at.y).unwrap();
+            let row = &mut self.rows[at.y];
             row.delete(at.x);
         }
     }
