@@ -1,17 +1,18 @@
-use crate::{Pos, Row, SearchDirection};
+use crate::{FileType, Pos, Row, SearchDirection};
 use std::io::{Error, Write};
 use std::{cmp::Ordering, fs};
 
 #[derive(Default)]
 pub struct Document {
+    pub file_name: Option<String>,
     rows: Vec<Row>,
     dirty: bool,
-    pub filename: Option<String>,
+    file_type: FileType,
 }
 
 impl Document {
-    pub fn open(filename: &str) -> Result<Self, std::io::Error> {
-        let contents = fs::read_to_string(filename)?;
+    pub fn open(file_name: &str) -> Result<Self, std::io::Error> {
+        let contents = fs::read_to_string(file_name)?;
         let mut rows = Vec::new();
         for value in contents.lines() {
             let mut row = Row::from(value);
@@ -21,7 +22,8 @@ impl Document {
         Ok(Self {
             rows,
             dirty: false,
-            filename: Some(filename.to_string()),
+            file_name: Some(file_name.to_string()),
+            file_type: FileType::default(),
         })
     }
 
@@ -39,6 +41,10 @@ impl Document {
 
     pub fn is_dirty(&self) -> bool {
         self.dirty
+    }
+
+    pub fn file_type(&self) -> String {
+        self.file_type.name()
     }
 
     pub fn insert(&mut self, at: &Pos, c: char) {
@@ -137,7 +143,7 @@ impl Document {
     }
 
     pub fn save(&mut self) -> Result<(), Error> {
-        if let Some(filename) = &self.filename {
+        if let Some(filename) = &self.file_name {
             let mut file = fs::File::create(filename)?;
             for row in &self.rows {
                 file.write_all(row.as_bytes())?;

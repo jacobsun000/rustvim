@@ -189,7 +189,7 @@ impl Editor {
         };
         let mut filename = self
             .document
-            .filename
+            .file_name
             .clone()
             .unwrap_or("[No Name]".to_string());
         filename.truncate(20);
@@ -199,7 +199,12 @@ impl Editor {
             self.document.len(),
             modified_indicator
         );
-        let line_indicator = format!("{}:{}", self.cursor_pos.x + 1, self.cursor_pos.y + 1);
+        let line_indicator = format!(
+            "{} | {}:{}",
+            self.document.file_type(),
+            self.cursor_pos.x + 1,
+            self.cursor_pos.y + 1
+        );
         let mut status = format!("{} {}", file_status, line_indicator);
         status = format!("{:width$}", status, width = width);
         status.truncate(width);
@@ -322,14 +327,14 @@ impl Editor {
     }
 
     fn save(&mut self) {
-        if self.document.filename.is_none() {
+        if self.document.file_name.is_none() {
             let new_name = self.prompt("Save as: ", |_, _, _| {}).unwrap_or(None);
 
             if new_name.is_none() {
                 self.status_message = StatusMessage::from("Save aborted.".to_string());
                 return;
             } else {
-                self.document.filename = new_name;
+                self.document.file_name = new_name;
             }
         }
         let message = if self.document.save().is_ok() {
