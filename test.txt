@@ -1,8 +1,10 @@
 apple
 banana
 banana1
-apple2
+apple 1232
 good
 banana
 cat
 dog
+number 162
+125
