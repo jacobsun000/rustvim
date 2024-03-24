@@ -256,6 +256,17 @@ impl Row {
                 }
             }
 
+            if opts.comments() && *c == '/' {
+                if let Some(next_char) = chars.get(index + 1) {
+                    if *next_char == '/' {
+                        for _ in index..chars.len() {
+                            highlighting.push(highlighting::Type::Comment);
+                        }
+                        break;
+                    }
+                };
+            }
+
             if opts.numbers() {
                 if (c.is_ascii_digit()
                     && (prev_is_separator || *previous_highlight == highlighting::Type::Number))
