@@ -59,7 +59,7 @@ impl Editor {
             cursor_pos: Pos::default(),
             offset: Pos::default(),
             should_quit: false,
-            terminal: Terminal::default().expect("Failed to initialize terminal"),
+            terminal: Terminal::new().expect("Failed to initialize terminal"),
             document,
             status_message: StatusMessage::from(initial_status),
         }
