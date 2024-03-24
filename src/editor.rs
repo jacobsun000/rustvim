@@ -101,7 +101,15 @@ impl Editor {
                 self.move_cursor(Key::Right)
             }
             Key::Ctrl('f') => {
-                if let Some(query) = self.prompt("Search: ").unwrap_or(None) {
+                if let Some(query) = self
+                    .prompt("Search: ", |editor, _, query| {
+                        if let Some(pos) = editor.document.find(&query) {
+                            editor.cursor_pos = pos;
+                            editor.scroll();
+                        }
+                    })
+                    .unwrap_or(None)
+                {
                     if let Some(pos) = self.document.find(&query) {
                         self.cursor_pos = pos;
                         self.scroll();
@@ -288,12 +296,16 @@ impl Editor {
         }
     }
 
-    fn prompt(&mut self, prompt: &str) -> Result<Option<String>, io::Error> {
+    fn prompt<C>(&mut self, prompt: &str, callback: C) -> Result<Option<String>, io::Error>
+    where
+        C: Fn(&mut Self, Key, &String),
+    {
         let mut result = String::new();
         loop {
             self.status_message = StatusMessage::from(format!("{}{}", prompt, result));
             self.refresh_screen()?;
-            match Terminal::read_key()? {
+            let key = Terminal::read_key()?;
+            match key {
                 Key::Backspace => {
                     if !result.is_empty() {
                         result.truncate(result.len() - 1);
@@ -311,6 +323,7 @@ impl Editor {
                 }
                 _ => (),
             }
+            callback(self, key, &result);
         }
         self.status_message = StatusMessage::from(String::new());
         if result.is_empty() {
@@ -321,7 +334,7 @@ impl Editor {
 
     fn save(&mut self) {
         if self.document.filename.is_none() {
-            let new_name = self.prompt("Save as: ").unwrap_or(None);
+            let new_name = self.prompt("Save as: ", |_, _, _| {}).unwrap_or(None);
 
             if new_name.is_none() {
                 self.status_message = StatusMessage::from("Save aborted.".to_string());
