@@ -26,6 +26,7 @@ impl Row {
         let end = cmp::min(end, self.string.len());
         let start = cmp::min(start, end);
         let mut result = String::new();
+        let mut current_highlighting = &highlighting::Type::None;
         for (index, grapheme) in self.string[..]
             .graphemes(true)
             .enumerate()
@@ -37,17 +38,22 @@ impl Row {
                     .highlighting
                     .get(index)
                     .unwrap_or(&highlighting::Type::None);
-                let start_highlight = format!("{}", color::Fg(highlighting_type.to_color()));
-                result.push_str(&start_highlight[..]);
+
+                if highlighting_type != current_highlighting {
+                    current_highlighting = highlighting_type;
+                    let start_highlight = format!("{}", color::Fg(highlighting_type.to_color()));
+                    result.push_str(&start_highlight[..]);
+                }
+
                 if c == '\t' {
                     result.push_str(" ".repeat(TAB_SPACE).as_str());
                 } else {
                     result.push(c);
                 }
-                let end_highlight = format!("{}", color::Fg(color::Reset));
-                result.push_str(&end_highlight[..]);
             }
         }
+        let end_highlight = format!("{}", color::Fg(color::Reset));
+        result.push_str(&end_highlight[..]);
         result
     }
 
