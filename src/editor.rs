@@ -100,6 +100,16 @@ impl Editor {
                 self.document.insert(&self.cursor_pos, c);
                 self.move_cursor(Key::Right)
             }
+            Key::Ctrl('f') => {
+                if let Some(query) = self.prompt("Search: ").unwrap_or(None) {
+                    if let Some(pos) = self.document.find(&query) {
+                        self.cursor_pos = pos;
+                        self.scroll();
+                    } else {
+                        self.status_message = StatusMessage::from(format!("Not found :{}.", query));
+                    }
+                }
+            }
             Key::Delete => self.document.delete(&self.cursor_pos),
             Key::Backspace => {
                 if self.cursor_pos.x > 0 || self.cursor_pos.y > 0 {

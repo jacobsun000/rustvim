@@ -74,6 +74,15 @@ impl Document {
         self.rows.insert(at.y + 1, new_row);
     }
 
+    pub fn find(&self, query: &str) -> Option<Pos> {
+        for (y, row) in self.rows.iter().enumerate() {
+            if let Some(x) = row.find(query) {
+                return Some(Pos { x, y });
+            }
+        }
+        None
+    }
+
     pub fn delete(&mut self, at: &Pos) {
         let len = self.len();
         if at.y >= len {

@@ -64,6 +64,15 @@ impl Row {
         self.string = result;
     }
 
+    pub fn find(&self, query: &str) -> Option<usize> {
+        if let Some(matching_byte_index) = self.string.find(query) {
+            return self.string[..]
+                .grapheme_indices(true)
+                .position(|(byte_index, _)| byte_index == matching_byte_index);
+        }
+        None
+    }
+
     pub fn delete(&mut self, at: usize) {
         if at >= self.len() {
             return;
