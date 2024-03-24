@@ -208,6 +208,29 @@ impl Row {
                 &highlighting::Type::None
             };
 
+            if opts.characters() && !in_string && *c == '\'' {
+                prev_is_separator = true;
+                if let Some(next_char) = chars.get(index + 1) {
+                    let closing_index = if *next_char == '\\' {
+                        index + 3
+                    } else {
+                        index + 2
+                    };
+                    if let Some(closing_char) = chars.get(closing_index) {
+                        if *closing_char == '\'' {
+                            for _ in 0..=closing_index - index {
+                                highlighting.push(highlighting::Type::Character);
+                                index += 1;
+                            }
+                            continue;
+                        }
+                    }
+                };
+                highlighting.push(highlighting::Type::None);
+                index += 1;
+                continue;
+            }
+
             if opts.strings() {
                 if in_string {
                     highlighting.push(highlighting::Type::String);
@@ -233,17 +256,18 @@ impl Row {
                 }
             }
 
-            if opts.numbers()
-                && (c.is_ascii_digit()
+            if opts.numbers() {
+                if (c.is_ascii_digit()
                     && (prev_is_separator || *previous_highlight == highlighting::Type::Number))
-                || (*c == '.' && *previous_highlight == highlighting::Type::Number)
-            {
-                highlighting.push(highlighting::Type::Number);
-            } else {
-                highlighting.push(highlighting::Type::None);
+                    || (*c == '.' && *previous_highlight == highlighting::Type::Number)
+                {
+                    highlighting.push(highlighting::Type::Number);
+                } else {
+                    highlighting.push(highlighting::Type::None);
+                }
+                prev_is_separator = c.is_ascii_punctuation() || c.is_ascii_whitespace();
+                index += 1;
             }
-            prev_is_separator = c.is_ascii_punctuation() || c.is_ascii_whitespace();
-            index += 1;
         }
         self.highlighting = highlighting;
     }
