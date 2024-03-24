@@ -11,7 +11,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Pos {
     pub x: usize,
     pub y: usize,
@@ -100,24 +100,7 @@ impl Editor {
                 self.document.insert(&self.cursor_pos, c);
                 self.move_cursor(Key::Right)
             }
-            Key::Ctrl('f') => {
-                if let Some(query) = self
-                    .prompt("Search: ", |editor, _, query| {
-                        if let Some(pos) = editor.document.find(&query) {
-                            editor.cursor_pos = pos;
-                            editor.scroll();
-                        }
-                    })
-                    .unwrap_or(None)
-                {
-                    if let Some(pos) = self.document.find(&query) {
-                        self.cursor_pos = pos;
-                        self.scroll();
-                    } else {
-                        self.status_message = StatusMessage::from(format!("Not found :{}.", query));
-                    }
-                }
-            }
+            Key::Ctrl('f') => self.search(),
             Key::Delete => self.document.delete(&self.cursor_pos),
             Key::Backspace => {
                 if self.cursor_pos.x > 0 || self.cursor_pos.y > 0 {
@@ -349,6 +332,28 @@ impl Editor {
             "Error writing to file!"
         };
         self.status_message = StatusMessage::from(message.to_string());
+    }
+
+    fn search(&mut self) {
+        let old_pos = self.cursor_pos.clone();
+        if let Some(query) = self
+            .prompt("Search: ", |editor, _, query| {
+                if let Some(pos) = editor.document.find(&query) {
+                    editor.cursor_pos = pos;
+                    editor.scroll();
+                }
+            })
+            .unwrap_or(None)
+        {
+            if let Some(pos) = self.document.find(&query[..]) {
+                self.cursor_pos = pos;
+            } else {
+                self.status_message = StatusMessage::from(format!("Not found: {}", query));
+            }
+        } else {
+            self.cursor_pos = old_pos;
+            self.scroll();
+        }
     }
 }
 
