@@ -93,7 +93,7 @@ impl Document {
 
         for _ in start..end {
             if let Some(row) = self.rows.get(pos.y) {
-                if let Some(x) = row.find(&query, pos.x, direction) {
+                if let Some(x) = row.find(query, pos.x, direction) {
                     pos.x = x;
                     return Some(pos);
                 }
