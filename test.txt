@@ -3,5 +3,6 @@ banana
 banana1
 apple2
 good
+banana
 cat
 dog

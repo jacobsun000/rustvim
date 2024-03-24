@@ -17,6 +17,12 @@ pub struct Pos {
     pub y: usize,
 }
 
+#[derive(PartialEq, Copy, Clone)]
+pub enum SearchDirection {
+    Forward,
+    Backward,
+}
+
 struct StatusMessage {
     text: String,
     time: Instant,
@@ -279,9 +285,9 @@ impl Editor {
         }
     }
 
-    fn prompt<C>(&mut self, prompt: &str, callback: C) -> Result<Option<String>, io::Error>
+    fn prompt<C>(&mut self, prompt: &str, mut callback: C) -> Result<Option<String>, io::Error>
     where
-        C: Fn(&mut Self, Key, &String),
+        C: FnMut(&mut Self, Key, &String),
     {
         let mut result = String::new();
         loop {
@@ -336,21 +342,31 @@ impl Editor {
 
     fn search(&mut self) {
         let old_pos = self.cursor_pos.clone();
-        if let Some(query) = self
-            .prompt("Search: ", |editor, _, query| {
-                if let Some(pos) = editor.document.find(&query) {
-                    editor.cursor_pos = pos;
-                    editor.scroll();
-                }
-            })
-            .unwrap_or(None)
-        {
-            if let Some(pos) = self.document.find(&query[..]) {
-                self.cursor_pos = pos;
-            } else {
-                self.status_message = StatusMessage::from(format!("Not found: {}", query));
-            }
-        } else {
+        let mut direction = SearchDirection::Forward;
+        let query = self
+            .prompt(
+                "Search (ESC to caecel, Arrows to navigate): ",
+                |editor, key, query| {
+                    let mut moved = false;
+                    match key {
+                        Key::Right | Key::Down => {
+                            direction = SearchDirection::Forward;
+                            editor.move_cursor(Key::Right);
+                            moved = true;
+                        }
+                        Key::Left | Key::Up => direction = SearchDirection::Backward,
+                        _ => direction = SearchDirection::Forward,
+                    }
+                    if let Some(pos) = editor.document.find(query, &editor.cursor_pos, direction) {
+                        editor.cursor_pos = pos;
+                        editor.scroll();
+                    } else if moved {
+                        editor.move_cursor(Key::Left);
+                    }
+                },
+            )
+            .unwrap_or(None);
+        if query.is_none() {
             self.cursor_pos = old_pos;
             self.scroll();
         }

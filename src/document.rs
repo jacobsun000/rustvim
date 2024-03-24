@@ -1,4 +1,4 @@
-use crate::{Pos, Row};
+use crate::{Pos, Row, SearchDirection};
 use std::io::{Error, Write};
 use std::{cmp::Ordering, fs};
 
@@ -74,10 +74,38 @@ impl Document {
         self.rows.insert(at.y + 1, new_row);
     }
 
-    pub fn find(&self, query: &str) -> Option<Pos> {
-        for (y, row) in self.rows.iter().enumerate() {
-            if let Some(x) = row.find(query) {
-                return Some(Pos { x, y });
+    pub fn find(&self, query: &str, at: &Pos, direction: SearchDirection) -> Option<Pos> {
+        if at.y >= self.rows.len() {
+            return None;
+        }
+        let mut pos = at.clone();
+
+        let start = if direction == SearchDirection::Forward {
+            at.y
+        } else {
+            0
+        };
+        let end = if direction == SearchDirection::Forward {
+            self.rows.len()
+        } else {
+            at.y + 1
+        };
+
+        for _ in start..end {
+            if let Some(row) = self.rows.get(pos.y) {
+                if let Some(x) = row.find(&query, pos.x, direction) {
+                    pos.x = x;
+                    return Some(pos);
+                }
+                if direction == SearchDirection::Forward {
+                    pos.y += 1;
+                    pos.x = 0;
+                } else {
+                    pos.y -= 1;
+                    pos.x = self.rows[pos.y].len();
+                }
+            } else {
+                return None;
             }
         }
         None
