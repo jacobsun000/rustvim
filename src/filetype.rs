@@ -6,11 +6,16 @@ pub struct FileType {
 #[derive(Default, Copy, Clone)]
 pub struct HighlightingOptions {
     numbers: bool,
+    strings: bool,
 }
 
 impl HighlightingOptions {
     pub fn numbers(self) -> bool {
         self.numbers
+    }
+
+    pub fn strings(self) -> bool {
+        self.strings
     }
 }
 
@@ -24,21 +29,24 @@ impl Default for FileType {
 }
 
 impl FileType {
+    pub fn from(file_name: &str) -> Self {
+        if file_name.ends_with(".rs") {
+            return Self {
+                name: String::from("rust"),
+                hl_opts: HighlightingOptions {
+                    numbers: true,
+                    strings: true,
+                },
+            };
+        }
+        Self::default()
+    }
+
     pub fn name(&self) -> String {
         self.name.clone()
     }
 
     pub fn highlighting_options(&self) -> HighlightingOptions {
         self.hl_opts
-    }
-
-    pub fn from(file_name: &str) -> Self {
-        if file_name.ends_with(".rs") {
-            return Self {
-                name: String::from("rust"),
-                hl_opts: HighlightingOptions { numbers: true },
-            };
-        }
-        Self::default()
     }
 }

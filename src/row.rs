@@ -188,6 +188,7 @@ impl Row {
         }
 
         let mut prev_is_separator = true;
+        let mut in_string = false;
         let mut index = 0;
         while let Some(c) = chars.get(index) {
             if let Some(word) = word {
@@ -199,7 +200,7 @@ impl Row {
                     continue;
                 }
             }
-            let previout_highlight = if index > 0 {
+            let previous_highlight = if index > 0 {
                 highlighting
                     .get(index - 1)
                     .unwrap_or(&highlighting::Type::None)
@@ -207,10 +208,35 @@ impl Row {
                 &highlighting::Type::None
             };
 
+            if opts.strings() {
+                if in_string {
+                    highlighting.push(highlighting::Type::String);
+                    if *c == '\\' && index < self.len() - 1 {
+                        highlighting.push(highlighting::Type::String);
+                        index += 2;
+                        continue;
+                    }
+                    if *c == '"' {
+                        in_string = false;
+                        prev_is_separator = true;
+                    } else {
+                        prev_is_separator = false;
+                    }
+                    index += 1;
+                    continue;
+                } else if prev_is_separator && *c == '"' {
+                    highlighting.push(highlighting::Type::String);
+                    in_string = true;
+                    prev_is_separator = true;
+                    index += 1;
+                    continue;
+                }
+            }
+
             if opts.numbers()
                 && (c.is_ascii_digit()
-                    && (prev_is_separator || previout_highlight == &highlighting::Type::Number))
-                || (c == &'.' && previout_highlight == &highlighting::Type::Number)
+                    && (prev_is_separator || *previous_highlight == highlighting::Type::Number))
+                || (*c == '.' && *previous_highlight == highlighting::Type::Number)
             {
                 highlighting.push(highlighting::Type::Number);
             } else {
