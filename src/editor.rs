@@ -1,4 +1,4 @@
-use crate::{Document, Row, Terminal, Mode};
+use crate::{Document, Mode, Row, Terminal};
 use std::cmp::{max, min};
 use std::time::{Duration, Instant};
 use std::{env, io};
@@ -60,6 +60,7 @@ impl Editor {
         } else {
             Document::default()
         };
+        Terminal::set_cursor_shape(Mode::Normal.cursor_shape());
 
         Self {
             cursor_pos: Pos::default(),
@@ -83,20 +84,52 @@ impl Editor {
                 break;
             }
 
-            if let Err(error) = self.process_keypress() {
+            if let Err(error) = self.handle_input() {
                 die(&error);
             }
         }
     }
 
-    fn process_keypress(&mut self) -> Result<(), io::Error> {
+    fn handle_input(&mut self) -> Result<(), io::Error> {
+        match self.mode {
+            Mode::Normal => self.handle_normal_mode_input()?,
+            Mode::Insert => self.handle_insert_mode_input()?,
+            Mode::Visual => self.handle_visual_mode_input()?,
+            Mode::Command => self.handle_command_mode_input()?,
+        }
+        self.scroll();
+        Ok(())
+    }
+
+    fn handle_normal_mode_input(&mut self) -> Result<(), io::Error> {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
+            Key::Esc => (),
+            Key::Char('i') => self.set_mode(Mode::Insert),
+            Key::Char('v') => self.set_mode(Mode::Visual),
+            Key::Char(':') => self.set_mode(Mode::Command),
             Key::Ctrl('q') => self.quit(),
             Key::Ctrl('x') => self.should_quit = true,
             Key::Ctrl('s') => self.save(),
-            Key::Char(c) => self.insert(c),
             Key::Ctrl('f') => self.search(),
+            Key::Up
+            | Key::Down
+            | Key::Left
+            | Key::Right
+            | Key::PageUp
+            | Key::PageDown
+            | Key::End
+            | Key::Home => self.move_cursor(pressed_key),
+            _ => (),
+        }
+        Ok(())
+    }
+
+    fn handle_insert_mode_input(&mut self) -> Result<(), io::Error> {
+        let pressed_key = Terminal::read_key()?;
+        match pressed_key {
+            Key::Esc => self.set_mode(Mode::Normal),
+            Key::Char(c) => self.insert(c),
             Key::Delete => self.delete(Direction::Forward),
             Key::Backspace => self.delete(Direction::Backward),
             Key::Up
@@ -109,8 +142,38 @@ impl Editor {
             | Key::Home => self.move_cursor(pressed_key),
             _ => (),
         }
-        self.scroll();
         Ok(())
+    }
+
+    fn handle_visual_mode_input(&mut self) -> Result<(), io::Error> {
+        let pressed_key = Terminal::read_key()?;
+        match pressed_key {
+            Key::Esc => self.set_mode(Mode::Normal),
+            Key::Up
+            | Key::Down
+            | Key::Left
+            | Key::Right
+            | Key::PageUp
+            | Key::PageDown
+            | Key::End
+            | Key::Home => self.move_cursor(pressed_key),
+            _ => (),
+        }
+        Ok(())
+    }
+
+    fn handle_command_mode_input(&mut self) -> Result<(), io::Error> {
+        let pressed_key = Terminal::read_key()?;
+        match pressed_key {
+            Key::Esc => self.set_mode(Mode::Normal),
+            _ => (),
+        }
+        Ok(())
+    }
+
+    fn set_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+        Terminal::set_cursor_shape(mode.cursor_shape())
     }
 
     fn refresh_screen(&mut self) -> Result<(), io::Error> {
@@ -171,6 +234,7 @@ impl Editor {
 
     fn draw_status_bar(&self) {
         let width = self.terminal.size().width as usize;
+        let mode = format!("[{}]", self.mode.name());
         let modified_indicator = if self.document.is_dirty() {
             " (modified)"
         } else {
@@ -194,7 +258,7 @@ impl Editor {
             self.cursor_pos.x + 1,
             self.cursor_pos.y + 1
         );
-        let mut status = format!("{} {}", file_status, line_indicator);
+        let mut status = format!("{mode} {file_status} {line_indicator}");
         status = format!("{:width$}", status, width = width);
         status.truncate(width);
 
