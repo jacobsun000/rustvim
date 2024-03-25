@@ -18,7 +18,7 @@ pub struct Pos {
 }
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum SearchDirection {
+pub enum Direction {
     Forward,
     Backward,
 }
@@ -50,7 +50,7 @@ pub struct Editor {
 impl Editor {
     pub fn default() -> Self {
         let args: Vec<String> = env::args().collect();
-        let mut initial_status = String::from("HELP: <C-S> = save <C-Q> = quit");
+        let mut initial_status = String::from("HELP: <C-S> = save <C-Q> = quit <C-F> = search");
         let document = if let Some(filename) = args.get(1) {
             if let Ok(doc) = Document::open(filename) {
                 doc
@@ -92,30 +92,13 @@ impl Editor {
     fn process_keypress(&mut self) -> Result<(), io::Error> {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
-            Key::Ctrl('q') => {
-                if self.document.is_dirty() {
-                    self.status_message = StatusMessage::from(
-                        "WARNING! File has unsaved changes. Please use <C-X> to abort changes"
-                            .to_string(),
-                    );
-                } else {
-                    self.should_quit = true;
-                }
-            }
+            Key::Ctrl('q') => self.quit(),
             Key::Ctrl('x') => self.should_quit = true,
             Key::Ctrl('s') => self.save(),
-            Key::Char(c) => {
-                self.document.insert(&self.cursor_pos, c);
-                self.move_cursor(Key::Right)
-            }
+            Key::Char(c) => self.insert(c),
             Key::Ctrl('f') => self.search(),
-            Key::Delete => self.document.delete(&self.cursor_pos),
-            Key::Backspace => {
-                if self.cursor_pos.x > 0 || self.cursor_pos.y > 0 {
-                    self.move_cursor(Key::Left);
-                    self.document.delete(&self.cursor_pos);
-                }
-            }
+            Key::Delete => self.delete(Direction::Forward),
+            Key::Backspace => self.delete(Direction::Backward),
             Key::Up
             | Key::Down
             | Key::Left
@@ -236,11 +219,7 @@ impl Editor {
         let terminal_height = self.terminal.size().height as usize;
         let Pos { mut x, mut y } = self.cursor_pos;
         let height = self.document.len();
-        let mut width = if let Some(row) = self.document.row(y) {
-            row.len()
-        } else {
-            0
-        };
+        let mut width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
         match key {
             Key::Up => y = max(y - 1, 0),
             Key::Down => y = min(y + 1, height),
@@ -249,11 +228,7 @@ impl Editor {
                     x -= 1;
                 } else if y > 0 {
                     y -= 1;
-                    if let Some(row) = self.document.row(y) {
-                        x = row.len();
-                    } else {
-                        x = 0;
-                    }
+                    x = self.document.row(y).map(|r| r.len()).unwrap_or(0);
                 }
             }
             Key::Right => {
@@ -270,11 +245,7 @@ impl Editor {
             Key::End => x = width,
             _ => (),
         }
-        width = if let Some(row) = self.document.row(y) {
-            row.len()
-        } else {
-            0
-        };
+        width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
         x = min(x, width);
         self.cursor_pos = Pos { x, y };
     }
@@ -353,7 +324,7 @@ impl Editor {
 
     fn search(&mut self) {
         let old_pos = self.cursor_pos.clone();
-        let mut direction = SearchDirection::Forward;
+        let mut direction = Direction::Forward;
         let query = self
             .prompt(
                 "Search (ESC to caecel, Arrows to navigate): ",
@@ -361,12 +332,12 @@ impl Editor {
                     let mut moved = false;
                     match key {
                         Key::Right | Key::Down => {
-                            direction = SearchDirection::Forward;
+                            direction = Direction::Forward;
                             editor.move_cursor(Key::Right);
                             moved = true;
                         }
-                        Key::Left | Key::Up => direction = SearchDirection::Backward,
-                        _ => direction = SearchDirection::Forward,
+                        Key::Left | Key::Up => direction = Direction::Backward,
+                        _ => direction = Direction::Forward,
                     }
                     if let Some(pos) = editor.document.find(query, &editor.cursor_pos, direction) {
                         editor.cursor_pos = pos;
@@ -383,6 +354,35 @@ impl Editor {
             self.scroll();
         }
         self.highlighted_word = None;
+    }
+
+    fn quit(&mut self) {
+        if self.document.is_dirty() {
+            self.status_message = StatusMessage::from(
+                "WARNING! File has unsaved changes. Please use <C-X> to abort changes".to_string(),
+            );
+        } else {
+            self.should_quit = true;
+        }
+    }
+
+    fn insert(&mut self, c: char) {
+        self.document.insert(&self.cursor_pos, c);
+        self.move_cursor(Key::Right)
+    }
+
+    fn delete(&mut self, direction: Direction) {
+        match direction {
+            Direction::Backward => {
+                if self.cursor_pos.x > 0 || self.cursor_pos.y > 0 {
+                    self.move_cursor(Key::Left);
+                    self.document.delete(&self.cursor_pos);
+                }
+            }
+            Direction::Forward => {
+                self.document.delete(&self.cursor_pos);
+            }
+        }
     }
 }
 
