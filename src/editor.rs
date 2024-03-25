@@ -221,7 +221,7 @@ impl Editor {
         let height = self.document.len();
         let mut width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
         match key {
-            Key::Up => y = max(y - 1, 0),
+            Key::Up => y = max(y.saturating_sub(1), 0),
             Key::Down => y = min(y + 1, height),
             Key::Left => {
                 if x > 0 {
@@ -239,7 +239,7 @@ impl Editor {
                     x = 0;
                 }
             }
-            Key::PageUp => y = max(y - terminal_height, 0),
+            Key::PageUp => y = max(y.saturating_sub(terminal_height), 0),
             Key::PageDown => y = min(y + terminal_height, height),
             Key::Home => x = 0,
             Key::End => x = width,
