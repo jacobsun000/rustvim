@@ -1,5 +1,4 @@
-use crate::{Document, Mode, Row, Terminal};
-use std::cmp::{max, min};
+use crate::{Action, Document, Mode, Row, Terminal};
 use std::time::{Duration, Instant};
 use std::{env, io};
 use termion::color;
@@ -9,10 +8,16 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
 
-#[derive(Default, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct Pos {
     pub x: usize,
     pub y: usize,
+}
+
+#[derive(Default, Copy, Clone)]
+pub struct RelativePos {
+    pub x: isize,
+    pub y: isize,
 }
 
 #[derive(PartialEq, Copy, Clone)]
@@ -90,6 +95,20 @@ impl Editor {
         }
     }
 
+    fn handle_action(&mut self, action: &Action) {
+        match action {
+            Action::SetMode(mode) => self.set_mode(*mode),
+            Action::MoveCursor(rel_pos) => self.move_cursor(*rel_pos),
+            Action::DeleteChar(dir) => self.delete(*dir),
+            Action::InsertChar(c) => self.insert(*c),
+            Action::Search => self.search(),
+            Action::Quit => self.quit(),
+            Action::Exit => self.should_quit = true,
+            Action::Save => self.save(),
+            Action::None => (),
+        }
+    }
+
     fn handle_input(&mut self) -> Result<(), io::Error> {
         match self.mode {
             Mode::Normal => self.handle_normal_mode_input()?,
@@ -102,16 +121,16 @@ impl Editor {
     }
 
     fn handle_normal_mode_input(&mut self) -> Result<(), io::Error> {
-        let pressed_key = Terminal::read_key()?;
-        match pressed_key {
-            Key::Esc => (),
-            Key::Char('i') => self.set_mode(Mode::Insert),
-            Key::Char('v') => self.set_mode(Mode::Visual),
-            Key::Char(':') => self.set_mode(Mode::Command),
-            Key::Ctrl('q') => self.quit(),
-            Key::Ctrl('x') => self.should_quit = true,
-            Key::Ctrl('s') => self.save(),
-            Key::Ctrl('f') => self.search(),
+        let key = Terminal::read_key()?;
+        let action = match key {
+            Key::Esc => Action::None,
+            Key::Char('i') => Action::SetMode(Mode::Insert),
+            Key::Char('v') => Action::SetMode(Mode::Visual),
+            Key::Char(':') => Action::SetMode(Mode::Command),
+            Key::Ctrl('q') => Action::Quit,
+            Key::Ctrl('x') => Action::Exit,
+            Key::Ctrl('s') => Action::Save,
+            Key::Ctrl('f') => Action::Search,
             Key::Up
             | Key::Down
             | Key::Left
@@ -119,19 +138,26 @@ impl Editor {
             | Key::PageUp
             | Key::PageDown
             | Key::End
-            | Key::Home => self.move_cursor(pressed_key),
-            _ => (),
-        }
+            | Key::Home => {
+                if let Some(rel_pos) = self.movement_key(key) {
+                    Action::MoveCursor(rel_pos)
+                } else {
+                    Action::None
+                }
+            }
+            _ => Action::None,
+        };
+        self.handle_action(&action);
         Ok(())
     }
 
     fn handle_insert_mode_input(&mut self) -> Result<(), io::Error> {
-        let pressed_key = Terminal::read_key()?;
-        match pressed_key {
-            Key::Esc => self.set_mode(Mode::Normal),
-            Key::Char(c) => self.insert(c),
-            Key::Delete => self.delete(Direction::Forward),
-            Key::Backspace => self.delete(Direction::Backward),
+        let key = Terminal::read_key()?;
+        let action = match key {
+            Key::Esc => Action::SetMode(Mode::Normal),
+            Key::Char(c) => Action::InsertChar(c),
+            Key::Delete => Action::DeleteChar(Direction::Forward),
+            Key::Backspace => Action::DeleteChar(Direction::Backward),
             Key::Up
             | Key::Down
             | Key::Left
@@ -139,16 +165,23 @@ impl Editor {
             | Key::PageUp
             | Key::PageDown
             | Key::End
-            | Key::Home => self.move_cursor(pressed_key),
-            _ => (),
-        }
+            | Key::Home => {
+                if let Some(rel_pos) = self.movement_key(key) {
+                    Action::MoveCursor(rel_pos)
+                } else {
+                    Action::None
+                }
+            }
+            _ => Action::None,
+        };
+        self.handle_action(&action);
         Ok(())
     }
 
     fn handle_visual_mode_input(&mut self) -> Result<(), io::Error> {
-        let pressed_key = Terminal::read_key()?;
-        match pressed_key {
-            Key::Esc => self.set_mode(Mode::Normal),
+        let key = Terminal::read_key()?;
+        let action = match key {
+            Key::Esc => Action::SetMode(Mode::Normal),
             Key::Up
             | Key::Down
             | Key::Left
@@ -156,18 +189,26 @@ impl Editor {
             | Key::PageUp
             | Key::PageDown
             | Key::End
-            | Key::Home => self.move_cursor(pressed_key),
-            _ => (),
-        }
+            | Key::Home => {
+                if let Some(rel_pos) = self.movement_key(key) {
+                    Action::MoveCursor(rel_pos)
+                } else {
+                    Action::None
+                }
+            }
+            _ => Action::None,
+        };
+        self.handle_action(&action);
         Ok(())
     }
 
     fn handle_command_mode_input(&mut self) -> Result<(), io::Error> {
-        let pressed_key = Terminal::read_key()?;
-        match pressed_key {
-            Key::Esc => self.set_mode(Mode::Normal),
-            _ => (),
-        }
+        let key = Terminal::read_key()?;
+        let action = match key {
+            Key::Esc => Action::SetMode(Mode::Normal),
+            _ => Action::None,
+        };
+        self.handle_action(&action);
         Ok(())
     }
 
@@ -279,38 +320,55 @@ impl Editor {
         }
     }
 
-    fn move_cursor(&mut self, key: Key) {
-        let terminal_height = self.terminal.size().height as usize;
-        let Pos { mut x, mut y } = self.cursor_pos;
-        let height = self.document.len();
-        let mut width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
+    fn movement_key(&self, key: Key) -> Option<RelativePos> {
         match key {
-            Key::Up => y = max(y.saturating_sub(1), 0),
-            Key::Down => y = min(y + 1, height),
-            Key::Left => {
-                if x > 0 {
-                    x -= 1;
-                } else if y > 0 {
-                    y -= 1;
-                    x = self.document.row(y).map(|r| r.len()).unwrap_or(0);
-                }
-            }
-            Key::Right => {
-                if x < width {
-                    x += 1;
-                } else if y < height {
-                    y += 1;
-                    x = 0;
-                }
-            }
-            Key::PageUp => y = max(y.saturating_sub(terminal_height), 0),
-            Key::PageDown => y = min(y + terminal_height, height),
-            Key::Home => x = 0,
-            Key::End => x = width,
-            _ => (),
+            Key::Up => Some(RelativePos { x: 0, y: -1 }),
+            Key::Down => Some(RelativePos { x: 0, y: 1 }),
+            Key::Left => Some(RelativePos { x: -1, y: 0 }),
+            Key::Right => Some(RelativePos { x: 1, y: 0 }),
+            Key::PageUp => Some(RelativePos {
+                x: 0,
+                y: -(self.terminal.size().height as isize),
+            }),
+            Key::PageDown => Some(RelativePos {
+                x: 0,
+                y: self.terminal.size().height as isize,
+            }),
+            Key::Home => Some(RelativePos {
+                x: -(self.cursor_pos.x as isize),
+                y: 0,
+            }),
+            Key::End => Some(RelativePos {
+                x: self
+                    .document
+                    .row(self.cursor_pos.y)
+                    .map(|r| r.len())
+                    .unwrap_or(0) as isize
+                    - self.cursor_pos.x as isize,
+                y: 0,
+            }),
+            _ => None,
         }
-        width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
-        x = min(x, width);
+    }
+
+    fn move_cursor(&mut self, rel_pos: RelativePos) {
+        let height = self.document.len();
+        let Pos { x: cur_x, y: cur_y } = self.cursor_pos;
+        let RelativePos { x: _, y: rel_y } = rel_pos;
+        let width = self.document.row(cur_y).map(|r| r.len()).unwrap_or(0);
+        let x;
+        let y;
+        if cur_x as isize + rel_pos.x < 0 {
+            y = cur_y.saturating_add_signed(rel_pos.y - 1).max(0);
+            x = self.document.row(y).map(|r| r.len()).unwrap_or(0);
+        } else if cur_x.saturating_add_signed(rel_pos.x) > width {
+            y = cur_y.saturating_add_signed(rel_y + 1).min(height);
+            x = 0 as usize;
+        } else {
+            y = cur_y.saturating_add_signed(rel_pos.y).max(0).min(height);
+            let width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
+            x = cur_x.saturating_add_signed(rel_pos.x).max(0).min(width);
+        }
         self.cursor_pos = Pos { x, y };
     }
 
@@ -397,7 +455,7 @@ impl Editor {
                     match key {
                         Key::Right | Key::Down => {
                             direction = Direction::Forward;
-                            editor.move_cursor(Key::Right);
+                            editor.move_cursor(RelativePos { x: 1, y: 0 });
                             moved = true;
                         }
                         Key::Left | Key::Up => direction = Direction::Backward,
@@ -407,7 +465,7 @@ impl Editor {
                         editor.cursor_pos = pos;
                         editor.scroll();
                     } else if moved {
-                        editor.move_cursor(Key::Left);
+                        editor.move_cursor(RelativePos { x: -1, y: 0 });
                     }
                     editor.highlighted_word = Some(query.to_string());
                 },
@@ -432,14 +490,14 @@ impl Editor {
 
     fn insert(&mut self, c: char) {
         self.document.insert(&self.cursor_pos, c);
-        self.move_cursor(Key::Right)
+        self.move_cursor(RelativePos { x: 1, y: 0 })
     }
 
     fn delete(&mut self, direction: Direction) {
         match direction {
             Direction::Backward => {
                 if self.cursor_pos.x > 0 || self.cursor_pos.y > 0 {
-                    self.move_cursor(Key::Left);
+                    self.move_cursor(RelativePos { x: -1, y: 0 });
                     self.document.delete(&self.cursor_pos);
                 }
             }
