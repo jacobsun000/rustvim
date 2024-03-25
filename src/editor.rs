@@ -1,6 +1,4 @@
-use crate::Document;
-use crate::Row;
-use crate::Terminal;
+use crate::{Document, Row, Terminal, Mode};
 use std::cmp::{max, min};
 use std::time::{Duration, Instant};
 use std::{env, io};
@@ -40,6 +38,7 @@ impl StatusMessage {
 pub struct Editor {
     cursor_pos: Pos,
     offset: Pos,
+    mode: Mode,
     document: Document,
     terminal: Terminal,
     should_quit: bool,
@@ -66,6 +65,7 @@ impl Editor {
             cursor_pos: Pos::default(),
             offset: Pos::default(),
             should_quit: false,
+            mode: Mode::Normal,
             terminal: Terminal::new().expect("Failed to initialize terminal"),
             document,
             status_message: StatusMessage::from(initial_status),

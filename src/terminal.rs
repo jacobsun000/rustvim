@@ -12,6 +12,15 @@ pub struct Terminal {
     _stdout: termion::raw::RawTerminal<io::Stdout>,
 }
 
+pub enum CursorShape {
+    BlinkingBar,
+    BlinkingBlock,
+    BlinkingUnderline,
+    SteadyBar,
+    SteadyBlock,
+    SteadyUnderline,
+}
+
 impl Terminal {
     pub fn new() -> Result<Self, std::io::Error> {
         let size = termion::terminal_size()?;
@@ -76,5 +85,16 @@ impl Terminal {
 
     pub fn reset_fg_color() {
         print!("{}", color::Fg(color::Reset));
+    }
+    
+    pub fn set_cursor_shape(shape: CursorShape) {
+        match shape {
+            CursorShape::BlinkingBar => print!("{}", termion::cursor::BlinkingBar),
+            CursorShape::BlinkingBlock => print!("{}", termion::cursor::BlinkingBlock),
+            CursorShape::BlinkingUnderline => print!("{}", termion::cursor::BlinkingUnderline),
+            CursorShape::SteadyBar => print!("{}", termion::cursor::SteadyBar),
+            CursorShape::SteadyBlock => print!("{}", termion::cursor::SteadyBlock),
+            CursorShape::SteadyUnderline => print!("{}", termion::cursor::SteadyUnderline),
+        }
     }
 }
