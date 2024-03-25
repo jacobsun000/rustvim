@@ -227,6 +227,29 @@ impl Row {
         false
     }
 
+    fn highlight_multiline_comment(&mut self, index: &mut usize, c: char, chars: &[char]) -> bool {
+        if c != '/' || *index >= chars.len() {
+            return false;
+        }
+        if let Some(next_char) = chars.get(index.saturating_add(1)) {
+            if *next_char != '*' {
+                return false;
+            }
+            let closing_index = if let Some(closing_index) = self.string[*index + 2..].find("*/") {
+                *index + closing_index + 4
+            } else {
+                chars.len()
+            };
+            for _ in *index..closing_index {
+                self.highlighting.push(highlighting::Type::MultilineComment);
+                *index += 1;
+            }
+        } else {
+            return false;
+        }
+        true
+    }
+
     fn highlight_string(&mut self, index: &mut usize, c: char, chars: &[char]) -> bool {
         if c == '"' {
             loop {
@@ -353,11 +376,34 @@ impl Row {
         )
     }
 
-    pub fn highlight(&mut self, opts: &HighlightingOptions, word: Option<&str>) {
+    pub fn highlight(
+        &mut self,
+        opts: &HighlightingOptions,
+        word: Option<&str>,
+        start_with_comment: bool,
+    ) -> bool {
         self.highlighting = Vec::new();
         let chars: Vec<char> = self.string.chars().collect();
         let mut index = 0;
+        let mut in_ml_comment = start_with_comment;
+        if in_ml_comment {
+            let closing_index = if let Some(closing_index) = self.string.find("*/") {
+                closing_index + 2
+            } else {
+                chars.len()
+            };
+            for _ in 0..closing_index {
+                self.highlighting.push(highlighting::Type::MultilineComment);
+            }
+            index = closing_index;
+        }
         while let Some(c) = chars.get(index) {
+            if opts.multiline_comments() && self.highlight_multiline_comment(&mut index, *c, &chars)
+            {
+                in_ml_comment = true;
+                continue;
+            }
+            in_ml_comment = false;
             if (opts.characters() && self.highlight_char(&mut index, *c, &chars))
                 || (opts.comments() && self.highlight_comment(&mut index, *c, &chars))
                 || (self.highlight_primary_keywords(&mut index, opts, &chars))
@@ -371,6 +417,10 @@ impl Row {
             index += 1;
         }
         self.highlight_match(word);
+        if in_ml_comment && &self.string[self.string.len().saturating_sub(2)..] != "*/" {
+            return true;
+        }
+        false
     }
 }
 
