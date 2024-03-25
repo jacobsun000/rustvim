@@ -251,7 +251,7 @@ impl Row {
         if c.is_ascii_digit() {
             if *index > 0 {
                 let prev_char = chars[*index - 1];
-                if !prev_char.is_ascii_punctuation() && !prev_char.is_ascii_whitespace() {
+                if !is_seperator(prev_char) {
                     return false;
                 }
             }
@@ -271,13 +271,97 @@ impl Row {
         false
     }
 
-    pub fn highlight(&mut self, opts: HighlightingOptions, word: Option<&str>) {
+    fn highlight_str(
+        &mut self,
+        index: &mut usize,
+        substring: &str,
+        chars: &[char],
+        hl_type: highlighting::Type,
+    ) -> bool {
+        if substring.is_empty() {
+            return false;
+        }
+
+        for (substring_index, c) in substring.chars().enumerate() {
+            if let Some(next_char) = chars.get(index.saturating_add(substring_index)) {
+                if c != *next_char {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        for _ in 0..substring.len() {
+            self.highlighting.push(hl_type);
+            *index += 1;
+        }
+        true
+    }
+
+    fn highlight_keywords(
+        &mut self,
+        index: &mut usize,
+        chars: &[char],
+        keywords: &[String],
+        hl_type: highlighting::Type,
+    ) -> bool {
+        if *index > 0 {
+            let prev_chars = chars[*index - 1];
+            if !is_seperator(prev_chars) {
+                return false;
+            }
+        }
+
+        for word in keywords {
+            if *index + word.len() < chars.len() {
+                let next_char = chars[*index + word.len()];
+                if !is_seperator(next_char) {
+                    continue;
+                }
+            }
+            if self.highlight_str(index, word, chars, hl_type) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn highlight_primary_keywords(
+        &mut self,
+        index: &mut usize,
+        opts: &HighlightingOptions,
+        chars: &[char],
+    ) -> bool {
+        self.highlight_keywords(
+            index,
+            chars,
+            opts.primary_keywords(),
+            highlighting::Type::PrimaryKeywords,
+        )
+    }
+    fn highlight_secondary_keywords(
+        &mut self,
+        index: &mut usize,
+        opts: &HighlightingOptions,
+        chars: &[char],
+    ) -> bool {
+        self.highlight_keywords(
+            index,
+            chars,
+            opts.secondary_keywords(),
+            highlighting::Type::SecondaryKeywords,
+        )
+    }
+
+    pub fn highlight(&mut self, opts: &HighlightingOptions, word: Option<&str>) {
         self.highlighting = Vec::new();
         let chars: Vec<char> = self.string.chars().collect();
         let mut index = 0;
         while let Some(c) = chars.get(index) {
             if (opts.characters() && self.highlight_char(&mut index, *c, &chars))
                 || (opts.comments() && self.highlight_comment(&mut index, *c, &chars))
+                || (self.highlight_primary_keywords(&mut index, opts, &chars))
+                || (self.highlight_secondary_keywords(&mut index, opts, &chars))
                 || (opts.strings() && self.highlight_string(&mut index, *c, &chars))
                 || (opts.numbers() && self.highlight_number(&mut index, *c, &chars))
             {
@@ -288,4 +372,8 @@ impl Row {
         }
         self.highlight_match(word);
     }
+}
+
+fn is_seperator(c: char) -> bool {
+    c.is_ascii_punctuation() || c.is_ascii_whitespace()
 }
