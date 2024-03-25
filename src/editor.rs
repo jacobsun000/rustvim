@@ -44,6 +44,7 @@ pub struct Editor {
     terminal: Terminal,
     should_quit: bool,
     status_message: StatusMessage,
+    highlighted_word: Option<String>,
 }
 
 impl Editor {
@@ -68,6 +69,7 @@ impl Editor {
             terminal: Terminal::new().expect("Failed to initialize terminal"),
             document,
             status_message: StatusMessage::from(initial_status),
+            highlighted_word: None,
         }
     }
 
@@ -128,13 +130,17 @@ impl Editor {
         Ok(())
     }
 
-    fn refresh_screen(&self) -> Result<(), io::Error> {
+    fn refresh_screen(&mut self) -> Result<(), io::Error> {
         Terminal::cursor_hide();
         Terminal::cursor_goto(&Pos::default());
         if self.should_quit {
             Terminal::clear_screen();
             println!("Exiting rvim.\r");
         } else {
+            self.document.highlight(
+                &self.highlighted_word,
+                Some(self.offset.y + self.terminal.size().height as usize),
+            );
             self.draw_rows();
             self.draw_status_bar();
             self.draw_message_bar();
@@ -368,7 +374,7 @@ impl Editor {
                     } else if moved {
                         editor.move_cursor(Key::Left);
                     }
-                    editor.document.highlight(Some(query));
+                    editor.highlighted_word = Some(query.to_string());
                 },
             )
             .unwrap_or(None);
@@ -376,7 +382,7 @@ impl Editor {
             self.cursor_pos = old_pos;
             self.scroll();
         }
-        self.document.highlight(None);
+        self.highlighted_word = None;
     }
 }
 
