@@ -363,7 +363,7 @@ impl Editor {
             x = self.document.row(y).map(|r| r.len()).unwrap_or(0);
         } else if cur_x.saturating_add_signed(rel_pos.x) > width {
             y = cur_y.saturating_add_signed(rel_y + 1).min(height);
-            x = 0 as usize;
+            x = 0;
         } else {
             y = cur_y.saturating_add_signed(rel_pos.y).max(0).min(height);
             let width = self.document.row(y).map(|r| r.len()).unwrap_or(0);
@@ -445,7 +445,7 @@ impl Editor {
     }
 
     fn search(&mut self) {
-        let old_pos = self.cursor_pos.clone();
+        let old_pos = self.cursor_pos;
         let mut direction = Direction::Forward;
         let query = self
             .prompt(

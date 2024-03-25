@@ -73,7 +73,7 @@ impl Document {
         if at.y >= self.rows.len() {
             return None;
         }
-        let mut pos = at.clone();
+        let mut pos = *at;
 
         let start = if direction == Direction::Forward {
             at.y
