@@ -98,9 +98,34 @@ impl Editor {
     fn handle_action(&mut self, action: &Action) {
         match action {
             Action::SetMode(mode) => self.set_mode(*mode),
-            Action::MoveCursor(rel_pos) => self.move_cursor(*rel_pos),
             Action::DeleteChar(dir) => self.delete(*dir),
             Action::InsertChar(c) => self.insert(*c),
+            Action::MoveCursor(rel_pos) => self.move_cursor(*rel_pos),
+            Action::MoveCursorLeft => self.move_cursor(RelativePos { x: -1, y: 0 }),
+            Action::MoveCursorRight => self.move_cursor(RelativePos { x: 1, y: 0 }),
+            Action::MoveCursorUp => self.move_cursor(RelativePos { x: 0, y: -1 }),
+            Action::MoveCursorDown => self.move_cursor(RelativePos { x: 0, y: 1 }),
+            Action::MoveCursorPageUp => self.move_cursor(RelativePos {
+                x: 0,
+                y: -(self.terminal.size().height as isize),
+            }),
+            Action::MoveCursorPageDown => self.move_cursor(RelativePos {
+                x: 0,
+                y: self.terminal.size().height as isize,
+            }),
+            Action::MoveCursorHome => self.move_cursor(RelativePos {
+                x: -(self.cursor_pos.x as isize),
+                y: 0,
+            }),
+            Action::MoveCursorEnd => self.move_cursor(RelativePos {
+                x: self
+                    .document
+                    .row(self.cursor_pos.y)
+                    .map(|r| r.len())
+                    .unwrap_or(0) as isize
+                    - self.cursor_pos.x as isize,
+                y: 0,
+            }),
             Action::Search => self.search(),
             Action::Quit => self.quit(),
             Action::Exit => self.should_quit = true,
@@ -131,20 +156,14 @@ impl Editor {
             Key::Ctrl('x') => Action::Exit,
             Key::Ctrl('s') => Action::Save,
             Key::Ctrl('f') => Action::Search,
-            Key::Up
-            | Key::Down
-            | Key::Left
-            | Key::Right
-            | Key::PageUp
-            | Key::PageDown
-            | Key::End
-            | Key::Home => {
-                if let Some(rel_pos) = self.movement_key(key) {
-                    Action::MoveCursor(rel_pos)
-                } else {
-                    Action::None
-                }
-            }
+            Key::Left => Action::MoveCursorLeft,
+            Key::Right => Action::MoveCursorRight,
+            Key::Up => Action::MoveCursorUp,
+            Key::Down => Action::MoveCursorDown,
+            Key::PageUp => Action::MoveCursorPageUp,
+            Key::PageDown => Action::MoveCursorPageDown,
+            Key::Home => Action::MoveCursorHome,
+            Key::End => Action::MoveCursorEnd,
             _ => Action::None,
         };
         self.handle_action(&action);
@@ -158,20 +177,14 @@ impl Editor {
             Key::Char(c) => Action::InsertChar(c),
             Key::Delete => Action::DeleteChar(Direction::Forward),
             Key::Backspace => Action::DeleteChar(Direction::Backward),
-            Key::Up
-            | Key::Down
-            | Key::Left
-            | Key::Right
-            | Key::PageUp
-            | Key::PageDown
-            | Key::End
-            | Key::Home => {
-                if let Some(rel_pos) = self.movement_key(key) {
-                    Action::MoveCursor(rel_pos)
-                } else {
-                    Action::None
-                }
-            }
+            Key::Left => Action::MoveCursorLeft,
+            Key::Right => Action::MoveCursorRight,
+            Key::Up => Action::MoveCursorUp,
+            Key::Down => Action::MoveCursorDown,
+            Key::PageUp => Action::MoveCursorPageUp,
+            Key::PageDown => Action::MoveCursorPageDown,
+            Key::Home => Action::MoveCursorHome,
+            Key::End => Action::MoveCursorEnd,
             _ => Action::None,
         };
         self.handle_action(&action);
@@ -182,20 +195,14 @@ impl Editor {
         let key = Terminal::read_key()?;
         let action = match key {
             Key::Esc => Action::SetMode(Mode::Normal),
-            Key::Up
-            | Key::Down
-            | Key::Left
-            | Key::Right
-            | Key::PageUp
-            | Key::PageDown
-            | Key::End
-            | Key::Home => {
-                if let Some(rel_pos) = self.movement_key(key) {
-                    Action::MoveCursor(rel_pos)
-                } else {
-                    Action::None
-                }
-            }
+            Key::Left => Action::MoveCursorLeft,
+            Key::Right => Action::MoveCursorRight,
+            Key::Up => Action::MoveCursorUp,
+            Key::Down => Action::MoveCursorDown,
+            Key::PageUp => Action::MoveCursorPageUp,
+            Key::PageDown => Action::MoveCursorPageDown,
+            Key::Home => Action::MoveCursorHome,
+            Key::End => Action::MoveCursorEnd,
             _ => Action::None,
         };
         self.handle_action(&action);
@@ -317,37 +324,6 @@ impl Editor {
             let mut text = message.text.clone();
             text.truncate(self.terminal.size().width as usize);
             print!("{}", text);
-        }
-    }
-
-    fn movement_key(&self, key: Key) -> Option<RelativePos> {
-        match key {
-            Key::Up => Some(RelativePos { x: 0, y: -1 }),
-            Key::Down => Some(RelativePos { x: 0, y: 1 }),
-            Key::Left => Some(RelativePos { x: -1, y: 0 }),
-            Key::Right => Some(RelativePos { x: 1, y: 0 }),
-            Key::PageUp => Some(RelativePos {
-                x: 0,
-                y: -(self.terminal.size().height as isize),
-            }),
-            Key::PageDown => Some(RelativePos {
-                x: 0,
-                y: self.terminal.size().height as isize,
-            }),
-            Key::Home => Some(RelativePos {
-                x: -(self.cursor_pos.x as isize),
-                y: 0,
-            }),
-            Key::End => Some(RelativePos {
-                x: self
-                    .document
-                    .row(self.cursor_pos.y)
-                    .map(|r| r.len())
-                    .unwrap_or(0) as isize
-                    - self.cursor_pos.x as isize,
-                y: 0,
-            }),
-            _ => None,
         }
     }
 
