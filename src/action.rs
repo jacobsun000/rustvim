@@ -1,6 +1,7 @@
 use crate::{RelativePos, Direction, Mode};
 
 pub enum Action {
+    Composite(Vec<Action>),
     DeleteChar(Direction),
     InsertChar(char),
     SetMode(Mode),

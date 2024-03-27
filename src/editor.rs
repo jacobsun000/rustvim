@@ -97,6 +97,11 @@ impl Editor {
 
     fn handle_action(&mut self, action: &Action) {
         match action {
+            Action::Composite(actions) => {
+                for a in actions {
+                    self.handle_action(a);
+                }
+            }
             Action::SetMode(mode) => self.set_mode(*mode),
             Action::DeleteChar(dir) => self.delete(*dir),
             Action::InsertChar(c) => self.insert(*c),
