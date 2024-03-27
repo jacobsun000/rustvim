@@ -217,10 +217,12 @@ impl Editor {
     }
 
     fn handle_command_mode_input(&mut self) -> Result<(), io::Error> {
-        let key = Terminal::read_key()?;
-        let action = match key {
-            Key::Esc => Action::SetMode(Mode::Normal),
-            _ => Action::None,
+        let command = self.prompt(":", |_, _, _| {}).unwrap_or(None).unwrap_or_default();
+        let action = match command.as_str() {
+            "w" => Action::Save,
+            "q" => Action::Quit,
+            "x" | "wq" => Action::Composite(vec![Action::Save, Action::Exit]),
+            _ => Action::SetMode(Mode::Normal),
         };
         self.handle_action(&action);
         Ok(())
