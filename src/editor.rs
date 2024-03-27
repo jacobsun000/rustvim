@@ -149,13 +149,13 @@ impl Editor {
         let key = Terminal::read_key()?;
         let action = match key {
             Key::Esc => Action::None,
-            Key::Char('i') => Action::SetMode(Mode::Insert),
-            Key::Char('v') => Action::SetMode(Mode::Visual),
-            Key::Char(':') => Action::SetMode(Mode::Command),
             Key::Ctrl('q') => Action::Quit,
             Key::Ctrl('x') => Action::Exit,
             Key::Ctrl('s') => Action::Save,
-            Key::Ctrl('f') => Action::Search,
+            Key::Char('i') => Action::SetMode(Mode::Insert),
+            Key::Char('v') => Action::SetMode(Mode::Visual),
+            Key::Char(':') => Action::SetMode(Mode::Command),
+            Key::Char('/') => Action::Search,
             Key::Left => Action::MoveCursorLeft,
             Key::Right => Action::MoveCursorRight,
             Key::Up => Action::MoveCursorUp,
@@ -195,6 +195,8 @@ impl Editor {
         let key = Terminal::read_key()?;
         let action = match key {
             Key::Esc => Action::SetMode(Mode::Normal),
+            Key::Char(':') => Action::SetMode(Mode::Command),
+            Key::Char('/') => Action::Search,
             Key::Left => Action::MoveCursorLeft,
             Key::Right => Action::MoveCursorRight,
             Key::Up => Action::MoveCursorUp,
