@@ -1,6 +1,7 @@
 use crate::terminal::CursorShape;
+use serde::Deserialize;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 pub enum Mode {
     Normal,
     Insert,

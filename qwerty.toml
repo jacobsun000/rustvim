@@ -1,0 +1,70 @@
+# keymap.toml
+normal = [
+  {keys = ["esc"],       actions = ["None"]},
+  {keys = ["ctrl-q"],    actions = ["Quit"]},
+  {keys = ["ctrl-x"],    actions = ["Exit"]},
+  {keys = ["ctrl-s"],    actions = ["Save"]},
+  {keys = ["i"],         actions = [{SetMode = "Insert"}]},
+  {keys = ["v"],         actions = [{SetMode = "Visual"}]},
+  {keys = [":"],         actions = [{SetMode = "Command"}]},
+  {keys = ["/"],         actions = ["Search"]},
+  {keys = ["left"],      actions = ["MoveCursorLeft"]},
+  {keys = ["right"],     actions = ["MoveCursorRight"]},
+  {keys = ["up"],        actions = ["MoveCursorUp"]},
+  {keys = ["down"],      actions = ["MoveCursorDown"]},
+  {keys = ["pageup"],    actions = ["MoveCursorPageUp"]},
+  {keys = ["pagedown"],  actions = ["MoveCursorPageDown"]},
+  {keys = ["home"],      actions = ["MoveCursorHome"]},
+  {keys = ["end"],       actions = ["MoveCursorEnd"]},
+  {keys = ["h"],         actions = ["MoveCursorLeft"]},
+  {keys = ["l"],         actions = ["MoveCursorRight"]},
+  {keys = ["k"],         actions = ["MoveCursorUp"]},
+  {keys = ["j"],         actions = ["MoveCursorDown"]},
+  {keys = ["ctrl-u"],    actions = ["MoveCursorPageUp"]},
+  {keys = ["ctrl-d"],    actions = ["MoveCursorPageDown"]},
+  {keys = ["0"],         actions = ["MoveCursorHome"]},
+  {keys = ["$"],         actions = ["MoveCursorEnd"]}
+]
+
+insert = [
+  {keys = ["esc"],       actions = [{SetMode = "Normal"}]},
+  {keys = ["delete"],    actions = [{DeleteChar = "Forward"}]},
+  {keys = ["backspace"], actions = [{DeleteChar = "Backward"}]},
+  {keys = ["left"],      actions = ["MoveCursorLeft"]},
+  {keys = ["right"],     actions = ["MoveCursorRight"]},
+  {keys = ["up"],        actions = ["MoveCursorUp"]},
+  {keys = ["down"],      actions = ["MoveCursorDown"]},
+  {keys = ["pageup"],    actions = ["MoveCursorPageUp"]},
+  {keys = ["pagedown"],  actions = ["MoveCursorPageDown"]},
+  {keys = ["home"],      actions = ["MoveCursorHome"]},
+  {keys = ["end"],       actions = ["MoveCursorEnd"]},
+]
+
+visual = [
+  {keys = ["esc"],       actions = [{SetMode = "Normal"}]},
+  {keys = [":"],         actions = [{SetMode = "Command"}]},
+  {keys = ["/"],         actions = ["Search"]},
+  {keys = ["left"],      actions = ["MoveCursorLeft"]},
+  {keys = ["right"],     actions = ["MoveCursorRight"]},
+  {keys = ["up"],        actions = ["MoveCursorUp"]},
+  {keys = ["down"],      actions = ["MoveCursorDown"]},
+  {keys = ["pageup"],    actions = ["MoveCursorPageUp"]},
+  {keys = ["pagedown"],  actions = ["MoveCursorPageDown"]},
+  {keys = ["home"],      actions = ["MoveCursorHome"]},
+  {keys = ["end"],       actions = ["MoveCursorEnd"]},
+  {keys = ["h"],         actions = ["MoveCursorLeft"]},
+  {keys = ["l"],         actions = ["MoveCursorRight"]},
+  {keys = ["k"],         actions = ["MoveCursorUp"]},
+  {keys = ["j"],         actions = ["MoveCursorDown"]},
+  {keys = ["ctrl-u"],    actions = ["MoveCursorPageUp"]},
+  {keys = ["ctrl-d"],    actions = ["MoveCursorPageDown"]},
+  {keys = ["0"],         actions = ["MoveCursorHome"]},
+  {keys = ["$"],         actions = ["MoveCursorEnd"]}
+]
+
+command = [
+  {keys = ["w"],         actions = ["Save"]},
+  {keys = ["w", "q"],    actions = ["Save", "Quit"]},
+  {keys = ["q"],         actions = ["Quit"]},
+  {keys = ["x"],         actions = ["Save", "Quit"]}
+]

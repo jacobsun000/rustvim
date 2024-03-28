@@ -1,26 +1,28 @@
-use crate::{Action, Document, Mode, Row, Terminal};
+use crate::{Action, Document, Mode, Row, Terminal, KeyMapConfig};
 use std::time::{Duration, Instant};
-use std::{env, io};
+use std::{env, io, fs};
 use termion::color;
 use termion::event::Key;
+use serde::{Serialize,Deserialize};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
+const KEYMAP_CONFIG_FILE: &str = "qwerty.toml";
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug, Deserialize, PartialEq)]
 pub struct Pos {
     pub x: usize,
     pub y: usize,
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug, Deserialize, PartialEq)]
 pub struct RelativePos {
     pub x: isize,
     pub y: isize,
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq)]
 pub enum Direction {
     Forward,
     Backward,
@@ -49,6 +51,7 @@ pub struct Editor {
     should_quit: bool,
     status_message: StatusMessage,
     highlighted_word: Option<String>,
+    keymap_config: KeyMapConfig,
 }
 
 impl Editor {
@@ -66,6 +69,7 @@ impl Editor {
             Document::default()
         };
         Terminal::set_cursor_shape(Mode::Normal.cursor_shape());
+        let keymap_config = KeyMapConfig::from(fs::read_to_string(KEYMAP_CONFIG_FILE).unwrap().as_str());
 
         Self {
             cursor_pos: Pos::default(),
@@ -76,6 +80,7 @@ impl Editor {
             document,
             status_message: StatusMessage::from(initial_status),
             highlighted_word: None,
+            keymap_config,
         }
     }
 

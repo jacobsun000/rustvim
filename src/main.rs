@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports)]
 mod action;
 mod document;
 mod editor;
@@ -7,7 +8,7 @@ mod row;
 mod mode;
 mod terminal;
 
-pub use action::Action;
+pub use action::{Action, KeyMapConfig};
 pub use document::Document;
 pub use editor::{Direction, Pos, RelativePos};
 pub use filetype::FileType;

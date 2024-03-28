@@ -9,3 +9,6 @@ edition = "2021"
 [dependencies]
 termion = "3.*"
 unicode-segmentation = "1.*"
+keymap = "0.1.*"
+toml = "0.8.*"
+serde = "1.0.197"
